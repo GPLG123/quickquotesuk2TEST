@@ -105,6 +105,9 @@ td[contenteditable="true"]:focus { outline:2px solid #6ca0dc; background-color:#
 
 <button id="sendExcelBtn" type="button">Send Excel</button>
 
+<!-- BUTON SPECIAL PENTRU EXPORT COMPLET -->
+<button onclick="exportAllData()" style="background-color:#4CAF50;color:white;">Export All Data</button>
+
 <table id="reportTable">
 <thead>
 <tr>
@@ -253,7 +256,7 @@ document.querySelector("#reportTable tbody").addEventListener("input", function(
 filterDate.addEventListener('change', ()=>loadTable());
 run.addEventListener('input', ()=>loadTable());
 
-// Export Excel
+// Export Excel pentru ziua curentă (buton șofer)
 sendExcelBtn.addEventListener('click', ()=>{
   const dateVal = filterDate.value;
   const runFilter = run.value.trim();
@@ -286,6 +289,39 @@ sendExcelBtn.addEventListener('click', ()=>{
   if(runFilter) fileName += "_Run_"+runFilter;
   XLSX.writeFile(wb, fileName+".xlsx");
 });
+
+// Export complet pentru tine (toate zilele)
+function exportAllData() {
+  const allData = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+  if(Object.keys(allData).length === 0) return alert("No data available");
+
+  Object.keys(allData).forEach(dateVal => {
+    let rows = [];
+    Object.keys(allData[dateVal]).forEach(runNum => {
+      allData[dateVal][runNum].forEach(entry => {
+        rows.push([
+          entry.date, entry.vehicle, entry.run, entry.location,
+          entry.arrival, entry.booking, entry.loading, entry.departure,
+          entry.specification, entry.comment
+        ]);
+      });
+    });
+
+    if(rows.length > 0){
+      const sheetData = [
+        ["Date","Vehicle","Run","Location","Arrival","Booking","Loading","Departure","Specification","Comment"],
+        ...rows
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Daily Report");
+
+      XLSX.writeFile(wb, "ATR_Driver_Report_"+dateVal+".xlsx");
+    }
+  });
+
+  alert("All data exported by date!");
+}
 
 // Initialize
 window.onload = function(){
