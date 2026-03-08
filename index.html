@@ -4,52 +4,171 @@
 <meta charset="UTF-8">
 <title>Run Sheet Drivers</title>
 
+<style>
+body{
+font-family:Arial;
+margin:30px;
+}
+
+input,select,textarea{
+width:220px;
+padding:6px;
+margin:6px 0;
+}
+
+button{
+padding:8px 15px;
+margin-top:12px;
+cursor:pointer;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:20px;
+font-size:14px;
+}
+
+th,td{
+border:1px solid #888;
+padding:6px;
+text-align:center;
+}
+
+th{
+background:#eee;
+}
+</style>
+
 <script>
-const API_URL="https://script.google.com/macros/s/AKfycbyLYXKCogOj6IEL7Mp2lDBkawRg4Wnu8uJRHsqgvHl2VOG9Dm7DoI4O-8MYTjSng2c2/exec";
+
+const API_URL="https://script.google.com/macros/s/AKfycbylgggp-wjd_uMWz5997_7JAEHCUt-0pZoEZLTk_nM/exec";
+
+let jobs=[];
 
 async function addEntry(){
 
-let vehicle=document.getElementById("vehicle").value;
-let run=document.getElementById("run").value;
+let vehicle=document.getElementById("vehicle").value.trim();
+let run=document.getElementById("run").value.trim();
 let specification=document.getElementById("specification").value;
 let location=document.getElementById("location").value;
+
 let arrival=document.getElementById("arrival").value;
 let booking=document.getElementById("booking").value;
 let loading=document.getElementById("loading").value;
 let departure=document.getElementById("departure").value;
-let comment=document.getElementById("comment").value;
+let comment=document.getElementById("comment").value.trim();
 
 if(!vehicle || !run || !specification || !location){
 alert("Complete required fields");
 return;
 }
 
-let payload={
-entries:[{
+let job={
 date:new Date().toISOString().split("T")[0],
-vehicle,run,specification,location,
-arrival,booking,loading,departure,comment
-}]
+vehicle,
+run,
+specification,
+location,
+arrival,
+booking,
+loading,
+departure,
+comment
 };
+
+jobs.push(job);
+
+renderTable();
+
+alert("Job added locally");
+}
+
+function renderTable(){
+
+let tbody=document.getElementById("tableBody");
+tbody.innerHTML="";
+
+jobs.forEach((j,i)=>{
+
+let row=tbody.insertRow();
+
+row.insertCell().innerText=j.date;
+row.insertCell().innerText=j.vehicle;
+row.insertCell().innerText=j.run;
+row.insertCell().innerText=j.specification;
+row.insertCell().innerText=j.arrival;
+row.insertCell().innerText=j.booking;
+row.insertCell().innerText=j.loading;
+row.insertCell().innerText=j.departure;
+row.insertCell().innerText=j.comment;
+
+let del=row.insertCell();
+
+let btn=document.createElement("button");
+btn.innerText="❌";
+
+btn.onclick=()=>{
+jobs.splice(i,1);
+renderTable();
+};
+
+del.appendChild(btn);
+
+});
+
+}
+
+async function exportGoogleSheet(){
+
+if(jobs.length===0){
+alert("No jobs to send");
+return;
+}
 
 try{
 
 let res=await fetch(API_URL,{
 method:"POST",
 headers:{"Content-Type":"application/json"},
-body:JSON.stringify(payload)
+body:JSON.stringify({entries:jobs})
 });
 
 let txt=await res.text();
-alert("Saved → "+txt);
 
-location.reload();
+alert("Server response: "+txt);
+
+jobs=[];
+renderTable();
 
 }catch(e){
 alert("Send failed");
 }
 
 }
+
+function downloadExcel(){
+
+if(jobs.length===0){
+alert("No data to download");
+return;
+}
+
+let csv="Date,Vehicle,Run,Specification,Arrival,Booking,Loading,Departure,Comment\n";
+
+jobs.forEach(j=>{
+csv+=`${j.date},${j.vehicle},${j.run},${j.specification},${j.arrival},${j.booking},${j.loading},${j.departure},${j.comment}\n`;
+});
+
+let blob=new Blob([csv],{type:"text/csv"});
+let url=URL.createObjectURL(blob);
+
+let a=document.createElement("a");
+a.href=url;
+a.download="RunSheetDrivers.csv";
+a.click();
+}
+
 </script>
 
 </head>
@@ -58,13 +177,13 @@ alert("Send failed");
 
 <h2>Driver Daily Report ATR</h2>
 
-Vehicle:<br>
+Vehicle<br>
 <input id="vehicle"><br>
 
-Run:<br>
+Run<br>
 <input id="run"><br>
 
-Specification:<br>
+Specification<br>
 <select id="specification">
 <option value="">Select</option>
 <option>Collection Only</option>
@@ -72,7 +191,7 @@ Specification:<br>
 <option>Collection and Delivery</option>
 </select><br>
 
-Location:<br>
+Location<br>
 <select id="location">
 <option value="">Select</option>
 <option>AC</option>
@@ -82,22 +201,43 @@ Location:<br>
 <option>Swissport</option>
 </select><br>
 
-Arrival:<br>
+Arrival<br>
 <input type="time" id="arrival"><br>
 
-Booking:<br>
+Booking<br>
 <input type="time" id="booking"><br>
 
-Loading:<br>
+Loading<br>
 <input type="time" id="loading"><br>
 
-Departure:<br>
+Departure<br>
 <input type="time" id="departure"><br>
 
-Comment:<br>
+Comment<br>
 <textarea id="comment"></textarea><br>
 
 <button onclick="addEntry()">Add Location</button>
+<button onclick="downloadExcel()">Send to Download</button>
+<button onclick="exportGoogleSheet()">Export Google Sheet</button>
+
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Vehicle</th>
+<th>Run</th>
+<th>Specification</th>
+<th>Arrival</th>
+<th>Booking</th>
+<th>Loading</th>
+<th>Departure</th>
+<th>Comment</th>
+<th>Delete</th>
+</tr>
+</thead>
+
+<tbody id="tableBody"></tbody>
+</table>
 
 </body>
 </html>
