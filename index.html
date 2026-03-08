@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>ATR Driver Report</title>
+<title>Driver Daily Report ATR</title>
 
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
@@ -115,10 +114,16 @@ style="display:none;width:220px">
 
 <input type="date" id="filterDate">
 
-<button id="sendExcelBtn">Export Local Excel</button>
+<div id="alertExcel">
+⚠ Export options below
+</div>
+
+<button id="downloadBtn" style="background:#4CAF50;color:white;">
+Download Excel
+</button>
 
 <button id="sendGSheetBtn"
-style="background:#2196F3;color:white">
+style="background:#2196F3;color:white;margin-left:10px;">
 Send to Google Sheet
 </button>
 
@@ -143,21 +148,22 @@ Send to Google Sheet
 
 <script>
 
+/* STORAGE */
 const STORAGE_KEY="ATR_dailyData";
 
-const API_URL="https://script.google.com/macros/s/AKfycbzOhcSfDCofJmfcnZZNi05_48Bh5SW7OBNocrYn4fGjz_5jGMIKQe0cvBuYkJa-kiKK/exec";
+/* API URL */
+const API_URL="https://script.google.com/macros/s/AKfycby-SnwoyA64hP1isOMEySamBIY7iwjm2E1FJcvyVd0Rj9_hSiBA4pMv_OudIQfOCMxBpw/exec";
 
+/* DATA LOAD */
 let dailyData=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");
 
 /* Manual location */
-
 document.getElementById("location").addEventListener("change",function(){
 document.getElementById("manualLocation").style.display=
 this.value==="manual" ? "block":"none";
 });
 
 /* Load table */
-
 function loadTable(date){
 
 const tbody=document.querySelector("#reportTable tbody");
@@ -166,6 +172,7 @@ tbody.innerHTML="";
 if(!dailyData[date]) return;
 
 Object.values(dailyData[date]).flat().forEach(entry=>{
+
 let row=tbody.insertRow();
 
 row.insertCell().textContent=entry.date;
@@ -178,17 +185,16 @@ row.insertCell().textContent=entry.loading;
 row.insertCell().textContent=entry.departure;
 row.insertCell().textContent=entry.specification;
 row.insertCell().textContent=entry.comment;
+
 });
 
 }
 
 /* Add Entry */
-
 addEntryBtn.onclick=function(){
 
 let vehicle=document.getElementById("vehicle").value.trim();
 let run=document.getElementById("run").value.trim();
-
 let specification=document.getElementById("specification").value;
 
 let locationSelect=document.getElementById("location");
@@ -227,13 +233,15 @@ loadTable(date);
 
 };
 
-/* Export Excel Local */
-
-sendExcelBtn.onclick=function(){
+/* Download Excel */
+downloadBtn.onclick=function(){
 
 let date=filterDate.value;
 
-if(!dailyData[date]) return alert("No data");
+if(!dailyData[date]){
+alert("No data");
+return;
+}
 
 let rows=[];
 
@@ -254,7 +262,10 @@ entry.comment
 });
 });
 
-if(rows.length===0) return alert("No rows");
+if(rows.length===0){
+alert("No rows");
+return;
+}
 
 const sheetData=[
 ["Date","Vehicle","Run","Location","Arrival","Booking","Loading","Departure","Specification","Comment"],
@@ -266,16 +277,19 @@ const wb=XLSX.utils.book_new();
 
 XLSX.utils.book_append_sheet(wb,ws,"Report");
 
-XLSX.writeFile(wb,"ATR_Report_"+filterDate.value+".xlsx");
+XLSX.writeFile(wb,"ATR_Report_"+date+".xlsx");
+
 };
 
 /* Send Google Sheet */
-
 sendGSheetBtn.onclick=function(){
 
 let date=filterDate.value;
 
-if(!dailyData[date]) return alert("No data");
+if(!dailyData[date]){
+alert("No data to send");
+return;
+}
 
 let entries=[];
 Object.values(dailyData[date]).forEach(runArr=>{
@@ -288,18 +302,19 @@ headers:{"Content-Type":"application/json"},
 body:JSON.stringify({entries})
 })
 .then(r=>r.text())
-.then(()=>alert("Sent to Google Sheet ✅"))
+.then(()=>alert("Google Sheet Export OK ✅"))
 .catch(()=>alert("Send failed ❌"));
 
 };
 
 /* Init */
-
 window.onload=function(){
+
 if(!filterDate.value)
 filterDate.value=new Date().toISOString().split("T")[0];
 
 loadTable(filterDate.value);
+
 };
 
 </script>
