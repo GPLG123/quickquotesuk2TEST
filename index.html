@@ -2,22 +2,34 @@
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Driver Daily Report ATR</title>
 
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
 <style>
-body{font-family:Arial;margin:20px;}
 
-label{font-weight:bold;display:block;margin-top:10px;}
+body{
+font-family:Arial;
+margin:20px;
+}
 
-input[type="text"],input[type="time"],select,textarea{
+label{
+font-weight:bold;
+display:block;
+margin-top:10px;
+}
+
+input,select,textarea{
 margin-top:4px;
 margin-bottom:10px;
 padding:6px;
 width:220px;
 }
 
-textarea{width:100%;height:40px;}
+textarea{
+width:100%;
+height:50px;
+}
 
 button{
 padding:8px 15px;
@@ -38,18 +50,10 @@ padding:6px;
 text-align:center;
 }
 
-th{background:#eee;}
-
-.short{width:120px;}
-
-#alertExcel{
-margin-top:15px;
-background:#f8d7da;
-border:1px solid #f5c6cb;
-color:#721c24;
-padding:10px;
-font-weight:bold;
+th{
+background:#eee;
 }
+
 </style>
 
 </head>
@@ -58,21 +62,21 @@ font-weight:bold;
 
 <h2>Driver Daily Report ATR</h2>
 
-<label>Vehicle:</label>
+<label>Vehicle</label>
 <input id="vehicle">
 
-<label>Run:</label>
+<label>Run</label>
 <input id="run">
 
-<label>Specification:</label>
+<label>Specification</label>
 <select id="specification">
-<option value="">Select specification</option>
+<option value="">Select</option>
 <option>Collection Only</option>
 <option>Delivery Only</option>
 <option>Collection and Delivery</option>
 </select>
 
-<label>Location:</label>
+<label>Location</label>
 <select id="location">
 <option value="">Select</option>
 <option>AC</option>
@@ -105,10 +109,7 @@ font-weight:bold;
 
 <hr>
 
-<label>Select Date</label>
-<input type="date" id="filterDate" class="short">
-
-<button onclick="exportGoogleSheet()">Export to Google Sheet</button>
+<button onclick="downloadExcel()">Download Excel</button>
 
 <table>
 <thead>
@@ -133,52 +134,46 @@ font-weight:bold;
 
 <script>
 
-const API_URL="https://script.google.com/macros/s/AKfycbylgggp-wjd_uMWz5997_7JAEHCUt-0pZoEZLTk_nM/dev";
-
 let jobs=[];
 
-// manual location
 document.getElementById("location").onchange=function(){
 document.getElementById("manualLocation").style.display=
 this.value==="manual"?"block":"none";
 };
 
-// add row
 function addEntry(){
 
-let vehicle=document.getElementById("vehicle").value.trim();
-let run=document.getElementById("run").value.trim();
-let specification=document.getElementById("specification").value;
+let vehicle=vehicleInput.value.trim();
+let run=runInput.value.trim();
 
-let locationSelect=document.getElementById("location").value;
+let spec=specification.value;
+
+let locationSelect=location.value;
 let manual=document.getElementById("manualLocation").value.trim();
 
-let location=locationSelect==="manual"?manual:locationSelect;
+let locationFinal=locationSelect==="manual"?manual:locationSelect;
 
-if(!vehicle||!run||!specification||!location){
+if(!vehicle||!run||!spec||!locationFinal){
 alert("Complete required fields");
 return;
 }
 
-let row={
-date:document.getElementById("filterDate").value,
+jobs.push({
+date:new Date().toISOString().split("T")[0],
 vehicle,
 run,
-location,
+location:locationFinal,
 arrival:arrival.value,
 booking:booking.value,
 loading:loading.value,
 departure:departure.value,
-specification,
+specification:spec,
 comment:comment.value
-};
-
-jobs.push(row);
+});
 
 renderTable();
 }
 
-// render table
 function renderTable(){
 
 let tbody=document.getElementById("tableBody");
@@ -188,16 +183,9 @@ jobs.forEach((j,index)=>{
 
 let row=tbody.insertRow();
 
-row.insertCell().textContent=j.date;
-row.insertCell().textContent=j.vehicle;
-row.insertCell().textContent=j.run;
-row.insertCell().textContent=j.location;
-row.insertCell().textContent=j.arrival;
-row.insertCell().textContent=j.booking;
-row.insertCell().textContent=j.loading;
-row.insertCell().textContent=j.departure;
-row.insertCell().textContent=j.specification;
-row.insertCell().textContent=j.comment;
+Object.values(j).forEach(v=>{
+row.insertCell().textContent=v;
+});
 
 let del=row.insertCell();
 
@@ -215,33 +203,33 @@ del.appendChild(btn);
 
 }
 
-// export google sheet
-async function exportGoogleSheet(){
+function downloadExcel(){
 
 if(jobs.length===0){
-alert("No data to export");
+alert("No data");
 return;
 }
 
-try{
+let headers=[
+"Date","Vehicle","Run","Location",
+"Arrival","Booking","Loading","Departure",
+"Specification","Comment"
+];
 
-let response=await fetch(API_URL,{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({entries:jobs})
+let rows=[headers];
+
+jobs.forEach(j=>{
+rows.push(Object.values(j));
 });
 
-let result=await response.text();
+let ws=XLSX.utils.aoa_to_sheet(rows);
+let wb=XLSX.utils.book_new();
 
-alert("Export status: "+result);
+XLSX.utils.book_append_sheet(wb,ws,"Report");
 
-jobs=[];
-renderTable();
+let filename="Driver_Report_"+new Date().toISOString().split("T")[0];
 
-}catch(e){
-alert("Send failed");
-}
-
+XLSX.writeFile(wb,filename+".xlsx");
 }
 
 </script>
