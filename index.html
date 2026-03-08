@@ -2,61 +2,55 @@
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Driver Daily Report ATR</title>
+<title>Run Sheet Drivers</title>
 
-<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<script>
+const API_URL="https://script.google.com/macros/s/AKfycbyLYXKCogOj6IEL7Mp2lDBkawRg4Wnu8uJRHsqgvHl2VOG9Dm7DoI4O-8MYTjSng2c2/exec";
 
-<style>
-body { font-family: Arial, sans-serif; margin: 20px; }
-label { font-weight: bold; margin-top: 10px; display: block; }
-input[type="text"], input[type="time"], select, textarea {
-margin-top:4px;
-margin-bottom:10px;
-padding:6px;
-width:220px;
-box-sizing:border-box;
+async function addEntry(){
+
+let vehicle=document.getElementById("vehicle").value;
+let run=document.getElementById("run").value;
+let specification=document.getElementById("specification").value;
+let location=document.getElementById("location").value;
+let arrival=document.getElementById("arrival").value;
+let booking=document.getElementById("booking").value;
+let loading=document.getElementById("loading").value;
+let departure=document.getElementById("departure").value;
+let comment=document.getElementById("comment").value;
+
+if(!vehicle || !run || !specification || !location){
+alert("Complete required fields");
+return;
 }
 
-textarea{width:100%;height:40px;resize:vertical;}
+let payload={
+entries:[{
+date:new Date().toISOString().split("T")[0],
+vehicle,run,specification,location,
+arrival,booking,loading,departure,comment
+}]
+};
 
-button{
-padding:8px 15px;
-margin-top:10px;
-cursor:pointer;
+try{
+
+let res=await fetch(API_URL,{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify(payload)
+});
+
+let txt=await res.text();
+alert("Saved → "+txt);
+
+location.reload();
+
+}catch(e){
+alert("Send failed");
 }
 
-table{
-width:100%;
-border-collapse: collapse;
-margin-top:20px;
-font-size:14px;
 }
-
-th, td{
-border:1px solid #888;
-padding:6px 8px;
-text-align:center;
-}
-
-th{background:#eee;}
-
-td[contenteditable="true"]:focus{
-outline:2px solid #6ca0dc;
-background:#f0f8ff;
-}
-
-.short{width:120px;}
-
-#alertExcel{
-margin-top:15px;
-background:#f8d7da;
-border:1px solid #f5c6cb;
-color:#721c24;
-padding:10px;
-font-weight:bold;
-}
-</style>
+</script>
 
 </head>
 
@@ -64,243 +58,46 @@ font-weight:bold;
 
 <h2>Driver Daily Report ATR</h2>
 
-<label>Vehicle:</label>
-<input type="text" id="vehicle" class="short">
+Vehicle:<br>
+<input id="vehicle"><br>
 
-<label>Run:</label>
-<input type="text" id="run" class="short">
+Run:<br>
+<input id="run"><br>
 
-<hr>
-
-<label>Specification:</label>
+Specification:<br>
 <select id="specification">
-<option value="">Select specification</option>
+<option value="">Select</option>
 <option>Collection Only</option>
 <option>Delivery Only</option>
 <option>Collection and Delivery</option>
-</select>
+</select><br>
 
-<label>Location:</label>
+Location:<br>
 <select id="location">
 <option value="">Select</option>
 <option>AC</option>
 <option>ASC</option>
 <option>BA WC</option>
-<option>manual</option>
-</select>
+<option>LANDMARK GLOBAL</option>
+<option>Swissport</option>
+</select><br>
 
-<input id="manualLocation" placeholder="Manual location" style="display:none">
+Arrival:<br>
+<input type="time" id="arrival"><br>
 
-<label>Arrival:</label>
-<input type="time" id="arrival">
+Booking:<br>
+<input type="time" id="booking"><br>
 
-<label>Booking:</label>
-<input type="time" id="booking">
+Loading:<br>
+<input type="time" id="loading"><br>
 
-<label>Loading:</label>
-<input type="time" id="loading">
+Departure:<br>
+<input type="time" id="departure"><br>
 
-<label>Departure:</label>
-<input type="time" id="departure">
+Comment:<br>
+<textarea id="comment"></textarea><br>
 
-<label>Comment:</label>
-<textarea id="comment"></textarea>
-
-<button id="addEntryBtn">Add Location</button>
-
-<hr>
-
-<label>Select Date:</label>
-<input type="date" id="filterDate" class="short">
-
-<div id="alertExcel">
-⚠️ Click Download or Export Google Sheet after adding entries
-</div>
-
-<button id="sendExcelBtn">Send to Download</button>
-<button id="sendGoogleBtn">Export Google Sheet</button>
-
-<table id="reportTable">
-<thead>
-<tr>
-<th>Date</th>
-<th>Vehicle</th>
-<th>Run</th>
-<th>Location</th>
-<th>Arrival</th>
-<th>Booking</th>
-<th>Loading</th>
-<th>Departure</th>
-<th>Specification</th>
-<th>Comment</th>
-<th>Delete</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-
-<script>
-
-const STORAGE_KEY="ATR_dailyData";
-const API_URL="https://script.google.com/macros/s/AKfycbyLYXKCogOj6IEL7Mp2lDBkawRg4Wnu8uJRHsqgvHl2VOG9Dm7DoI4O-8MYTjSng2c2/exec";
-
-let dailyData=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");
-
-/* Manual location */
-location.addEventListener("change",()=>{
-manualLocation.style.display=(location.value==="manual")?"block":"none";
-});
-
-/* Load table */
-function loadTable(date=filterDate.value){
-
-let tbody=document.querySelector("#reportTable tbody");
-tbody.innerHTML="";
-
-if(!dailyData[date]) return;
-
-Object.keys(dailyData[date]).forEach(runNum=>{
-dailyData[date][runNum].forEach(entry=>{
-
-let row=tbody.insertRow();
-
-row.insertCell().textContent=entry.date;
-row.insertCell().textContent=entry.vehicle;
-row.insertCell().textContent=entry.run;
-row.insertCell().textContent=entry.location;
-row.insertCell().textContent=entry.arrival;
-row.insertCell().textContent=entry.booking;
-row.insertCell().textContent=entry.loading;
-row.insertCell().textContent=entry.departure;
-row.insertCell().textContent=entry.specification;
-row.insertCell().textContent=entry.comment;
-
-let del=row.insertCell();
-let btn=document.createElement("button");
-btn.innerText="❌";
-
-btn.onclick=()=>{
-dailyData[entry.date][entry.run]=
-dailyData[entry.date][entry.run].filter(e=>e!==entry);
-
-localStorage.setItem(STORAGE_KEY,JSON.stringify(dailyData));
-loadTable(entry.date);
-};
-
-del.appendChild(btn);
-
-});
-});
-
-}
-
-/* Add Entry */
-addEntryBtn.onclick=()=>{
-
-let vehicleVal=vehicle.value.trim();
-let runVal=run.value.trim();
-
-let dateVal=new Date().toISOString().split("T")[0];
-
-let locationVal=(location.value==="manual")?
-manualLocation.value.trim():
-location.value;
-
-if(!vehicleVal||!runVal||!locationVal||!specification.value){
-alert("Fill required fields");
-return;
-}
-
-if(!dailyData[dateVal]) dailyData[dateVal]={};
-if(!dailyData[dateVal][runVal]) dailyData[dateVal][runVal]=[];
-
-dailyData[dateVal][runVal].push({
-date:dateVal,
-vehicle:vehicleVal,
-run:runVal,
-location:locationVal,
-arrival:arrival.value,
-booking:booking.value,
-loading:loading.value,
-departure:departure.value,
-specification:specification.value,
-comment:comment.value
-});
-
-localStorage.setItem(STORAGE_KEY,JSON.stringify(dailyData));
-loadTable(dateVal);
-};
-
-/* Download Excel */
-sendExcelBtn.onclick=()=>{
-
-let dateVal=filterDate.value;
-if(!dailyData[dateVal]) return alert("No data");
-
-let rows=[];
-
-Object.keys(dailyData[dateVal]).forEach(runNum=>{
-dailyData[dateVal][runNum].forEach(e=>{
-rows.push([
-e.date,e.vehicle,e.run,e.location,
-e.arrival,e.booking,e.loading,e.departure,
-e.specification,e.comment
-]);
-});
-});
-
-if(rows.length===0) return alert("No rows");
-
-let sheetData=[
-["Date","Vehicle","Run","Location","Arrival","Booking","Loading","Departure","Specification","Comment"],
-...rows
-];
-
-let ws=XLSX.utils.aoa_to_sheet(sheetData);
-let wb=XLSX.utils.book_new();
-XLSX.utils.book_append_sheet(wb,ws,"Report");
-
-XLSX.writeFile(wb,"ATR_Report_"+dateVal+".xlsx");
-
-};
-
-/* Google Sheet Export */
-sendGoogleBtn.onclick=async()=>{
-
-let dateVal=filterDate.value;
-if(!dailyData[dateVal]) return alert("No data");
-
-let entries=[];
-
-Object.values(dailyData[dateVal]).forEach(runGroup=>{
-runGroup.forEach(e=>entries.push(e));
-});
-
-try{
-
-let res=await fetch(API_URL,{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({entries})
-});
-
-let txt=await res.text();
-
-alert("Google Sheet response: "+txt);
-
-}catch(err){
-alert("Send failed");
-}
-
-};
-
-/* Init */
-window.onload=()=>{
-filterDate.value=new Date().toISOString().split("T")[0];
-loadTable();
-};
-
-</script>
+<button onclick="addEntry()">Add Location</button>
 
 </body>
 </html>
