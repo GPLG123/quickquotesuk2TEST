@@ -1,35 +1,290 @@
-// Send to Google Sheets
-sendExcelBtn.addEventListener('click', ()=>{
-  const dateVal = filterDate.value;
-  const runFilter = run.value.trim();
-  if(!dailyData[dateVal]) return alert("No data for this date");
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-  let entries = [];
-  Object.keys(dailyData[dateVal]).forEach(runNum=>{
-    if(runFilter && runNum!==runFilter) return;
-    dailyData[dateVal][runNum].forEach(entry=>{
-      entries.push(entry);
-    });
-  });
+<title>Driver Daily Report ATR</title>
 
-  if(entries.length===0) return alert("No rows to send");
+<style>
+body { font-family: Arial, sans-serif; margin: 20px; }
+label { font-weight: bold; margin-top: 10px; display: block; }
 
-  fetch("https://script.google.com/macros/s/AKfycbwXJGae5cpj0xOAfWCM9XCDh70LHM6FEtHoBxdjw0_1bE2nPpQ-cHdQvL-4pRQ1UCyA5Q/exec", {
-    method: "POST",
-    body: JSON.stringify({
-      entries: entries
-    }),
-    headers: {
-      "Content-Type": "application/json"
-    }
-  })
-  .then(response => response.text())
-  .then(data => {
-    alert("✅ Data sent successfully to Google Sheets!");
-    console.log(data);
-  })
-  .catch(error => {
-    console.error(error);
-    alert("❌ Error sending data.");
-  });
+input[type="text"],
+input[type="time"],
+input[type="date"],
+select,
+textarea {
+margin-top:4px;
+margin-bottom:10px;
+padding:6px;
+width:220px;
+box-sizing:border-box;
+}
+
+textarea {
+width:100%;
+height:40px;
+resize:vertical;
+}
+
+button {
+padding:8px 15px;
+margin-top:10px;
+cursor:pointer;
+}
+
+table {
+width:100%;
+border-collapse: collapse;
+margin-top:20px;
+font-size:14px;
+}
+
+th, td {
+border:1px solid #888;
+padding:6px 8px;
+text-align:center;
+}
+
+th { background-color:#eee; }
+
+.short { width:120px; }
+
+#alertExcel {
+margin-top:15px;
+background-color:#f8d7da;
+border:1px solid #f5c6cb;
+color:#721c24;
+padding:10px;
+font-weight:bold;
+}
+</style>
+
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+</head>
+
+<body>
+
+<h2>Driver Daily Report ATR</h2>
+
+<label>Vehicle:</label>
+<input type="text" id="vehicle" class="short">
+
+<label>Run:</label>
+<input type="text" id="run" class="short">
+
+<hr>
+
+<label>Collection and Delivery Specification:</label>
+<select id="specification">
+<option value="">Select specification</option>
+<option>Collection Only</option>
+<option>Delivery Only</option>
+<option>Collection and Delivery</option>
+</select>
+
+<label>Collection and Delivery Point:</label>
+<select id="location">
+<option value="">Select</option>
+<option>AC</option>
+<option>ASC</option>
+<option>BA WC</option>
+<option>BA WC 2nd</option>
+<option>Ba XPS</option>
+<option>DAI</option>
+<option>Dnata CP</option>
+<option>Dnata CX</option>
+<option>Dnata U1</option>
+<option>Dnata U2</option>
+<option>Dnata U3</option>
+<option>Dnata VS/Delta</option>
+<option>HCH</option>
+<option>HCH Horton</option>
+<option>JL</option>
+<option>LG</option>
+<option>LANDMARK GLOBAL</option>
+<option>MW</option>
+<option>Scylla Rd</option>
+<option>Scylla U1</option>
+<option>WFS 549</option>
+<option>WFS 550</option>
+<option>ECMS</option>
+<option>Swissport</option>
+<option>BREAK</option>
+<option value="manual">Other (Manual)</option>
+</select>
+
+<input type="text" id="manualLocation" placeholder="Enter manual location"
+style="display:none; width:220px;">
+
+<label>Arrival Time:</label>
+<input type="time" id="arrival">
+
+<label>Booking Time:</label>
+<input type="time" id="booking">
+
+<label>Loading:</label>
+<input type="time" id="loading">
+
+<label>Departure:</label>
+<input type="time" id="departure">
+
+<label>Comment:</label>
+<textarea id="comment"></textarea>
+
+<button id="addEntryBtn">Add Location</button>
+<button id="sendExcelBtn">Send to Google Sheets</button>
+
+<hr>
+
+<label>Select Date:</label>
+<input type="date" id="filterDate" class="short">
+
+<div id="alertExcel">
+⚠️ After adding locations press <strong>Send to Google Sheets</strong>
+</div>
+
+<table id="reportTable">
+<thead>
+<tr>
+<th>Date</th>
+<th>Vehicle</th>
+<th>Run</th>
+<th>Location</th>
+<th>Arrival</th>
+<th>Booking</th>
+<th>Loading</th>
+<th>Departure</th>
+<th>Specification</th>
+<th>Comment</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<script>
+
+const STORAGE_KEY="ATR_dailyData";
+
+const API_URL="https://script.google.com/macros/s/AKfycbxiGHuCJkebcECIncBS2fPIhgNzLC6bDMh9fOttv03H0DSy8-qw-z89XncZdPZbdZChFQ/exec";
+
+let dailyData=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");
+
+/* ===== Manual Location ===== */
+
+document.getElementById("location").addEventListener("change",function(){
+document.getElementById("manualLocation").style.display =
+this.value==="manual" ? "block" : "none";
 });
+
+/* ===== Load Table ===== */
+
+function loadTable(date){
+
+const tbody=document.querySelector("#reportTable tbody");
+tbody.innerHTML="";
+
+if(!dailyData[date]) return;
+
+Object.values(dailyData[date]).flat().forEach(entry=>{
+let row=tbody.insertRow();
+
+row.insertCell().textContent=entry.date;
+row.insertCell().textContent=entry.vehicle;
+row.insertCell().textContent=entry.run;
+row.insertCell().textContent=entry.location;
+row.insertCell().textContent=entry.arrival;
+row.insertCell().textContent=entry.booking;
+row.insertCell().textContent=entry.loading;
+row.insertCell().textContent=entry.departure;
+row.insertCell().textContent=entry.specification;
+row.insertCell().textContent=entry.comment;
+});
+}
+
+/* ===== Add Entry ===== */
+
+addEntryBtn.onclick=function(){
+
+let vehicle=vehicle.value.trim();
+let run=run.value.trim();
+
+let specification=document.getElementById("specification").value;
+
+let locationSelect=document.getElementById("location");
+let locationValue =
+locationSelect.value==="manual"
+? document.getElementById("manualLocation").value.trim()
+: locationSelect.value;
+
+if(!vehicle || !run || !locationValue || !specification){
+alert("Please fill required fields");
+return;
+}
+
+let date=new Date().toISOString().split("T")[0];
+
+if(!dailyData[date]) dailyData[date]={};
+if(!dailyData[date][run]) dailyData[date][run]=[];
+
+dailyData[date][run].push({
+date,
+vehicle,
+run,
+location:locationValue,
+arrival:arrival.value,
+booking:booking.value,
+loading:loading.value,
+departure:departure.value,
+specification,
+comment:comment.value
+});
+
+localStorage.setItem(STORAGE_KEY,JSON.stringify(dailyData));
+
+loadTable(date);
+};
+
+/* ===== Send to Google Sheets ===== */
+
+sendExcelBtn.onclick=function(){
+
+let date=document.getElementById("filterDate").value;
+
+if(!dailyData[date]){
+alert("No data for selected date");
+return;
+}
+
+let entries=[];
+Object.values(dailyData[date]).forEach(runArr=>{
+entries.push(...runArr);
+});
+
+fetch(API_URL,{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({entries})
+})
+.then(r=>r.text())
+.then(()=>alert("Data sent to Google Sheets"))
+.catch(()=>alert("Send failed"));
+};
+
+/* ===== Init ===== */
+
+window.onload=function(){
+
+let today=new Date().toISOString().split("T")[0];
+
+document.getElementById("filterDate").value=today;
+
+loadTable(today);
+};
+
+</script>
+
+</body>
+</html>
