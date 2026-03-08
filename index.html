@@ -2,7 +2,6 @@
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Driver Daily Report ATR</title>
 
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
@@ -24,7 +23,6 @@ input,select,textarea{
 padding:6px;
 width:220px;
 margin-bottom:8px;
-box-sizing:border-box;
 }
 
 textarea{
@@ -42,7 +40,6 @@ table{
 width:100%;
 border-collapse:collapse;
 margin-top:20px;
-font-size:14px;
 }
 
 th,td{
@@ -114,18 +111,16 @@ style="display:none;width:220px">
 
 <input type="date" id="filterDate">
 
-<div id="alertExcel">
-⚠ Export options below
-</div>
-
-<button id="downloadBtn" style="background:#4CAF50;color:white;">
+<div style="margin-top:15px">
+<button id="downloadBtn" style="background:#4CAF50;color:white">
 Download Excel
 </button>
 
 <button id="sendGSheetBtn"
-style="background:#2196F3;color:white;margin-left:10px;">
+style="background:#2196F3;color:white;margin-left:10px">
 Send to Google Sheet
 </button>
+</div>
 
 <table id="reportTable">
 <thead>
@@ -151,7 +146,7 @@ Send to Google Sheet
 /* STORAGE */
 const STORAGE_KEY="ATR_dailyData";
 
-/* API URL */
+/* API URL YOUR DEPLOYMENT */
 const API_URL="https://script.google.com/macros/s/AKfycby-SnwoyA64hP1isOMEySamBIY7iwjm2E1FJcvyVd0Rj9_hSiBA4pMv_OudIQfOCMxBpw/exec";
 
 /* DATA LOAD */
@@ -298,7 +293,9 @@ entries.push(...runArr);
 
 fetch(API_URL,{
 method:"POST",
-headers:{"Content-Type":"application/json"},
+headers:{
+"Content-Type":"application/json"
+},
 body:JSON.stringify({entries})
 })
 .then(r=>r.text())
