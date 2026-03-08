@@ -265,6 +265,7 @@ sendExcelBtn.addEventListener('click', ()=>{
 
   if(entries.length===0) return alert("No rows to send");
 
+  // 🔹 URL-ul Apps Script Web App
   fetch("https://script.google.com/macros/s/AKfycbz5oGvOaI6tC9pmN5uR2y61JlP4t0wrGsyduOU-PAQg5leGFw7IEQHZYWWTQNBnAcRlcQ/exec", {
     method: "POST",
     body: JSON.stringify({ date: dateVal, run: runFilter || "all", entries: entries }),
