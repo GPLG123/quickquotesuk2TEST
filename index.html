@@ -100,7 +100,7 @@ td[contenteditable="true"]:focus { outline:2px solid #6ca0dc; background-color:#
 <input type="date" id="filterDate" class="short">
 
 <div id="alertExcel">
-⚠️ Important: After adding all locations, make sure to click <strong>Send Excel</strong> to save your daily report to Google Sheets! ⚠️
+⚠️ Important: After adding all locations, make sure to click <strong>Send to Google Sheets</strong> to save your daily report! ⚠️
 </div>
 
 <button id="sendExcelBtn" type="button">Send to Google Sheets</button>
@@ -265,7 +265,7 @@ sendExcelBtn.addEventListener('click', ()=>{
 
   if(entries.length===0) return alert("No rows to send");
 
-  fetch("APPS_SCRIPT_WEB_APP_URL", { // <--- pune aici URL-ul Apps Script
+  fetch("https://script.google.com/macros/s/AKfycbz5oGvOaI6tC9pmN5uR2y61JlP4t0wrGsyduOU-PAQg5leGFw7IEQHZYWWTQNBnAcRlcQ/exec", {
     method: "POST",
     body: JSON.stringify({ date: dateVal, run: runFilter || "all", entries: entries }),
     headers: { "Content-Type": "application/json" }
