@@ -1,40 +1,208 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Driver Daily Report ATR</title>
+
+<style>
+body{font-family:Arial;margin:20px;}
+label{font-weight:bold;display:block;margin-top:10px;}
+input,select,textarea{width:220px;padding:6px;margin-top:4px;margin-bottom:10px;}
+textarea{width:100%;height:40px;}
+button{padding:8px 15px;margin-top:10px;cursor:pointer;}
+
+table{width:100%;border-collapse:collapse;margin-top:20px;font-size:14px;}
+th,td{border:1px solid #888;padding:6px;text-align:center;}
+th{background:#eee;}
+</style>
+
+</head>
+
+<body>
+
+<h2>Driver Daily Report ATR</h2>
+
+<label>Vehicle</label>
+<input id="vehicle" placeholder="Vehicle">
+
+<label>Run</label>
+<input id="run" placeholder="Run #">
+
+<label>Specification</label>
+<select id="specification">
+<option value="">Select</option>
+<option>Collection Only</option>
+<option>Delivery Only</option>
+<option>Collection and Delivery</option>
+</select>
+
+<label>Location</label>
+<select id="location">
+<option value="">Select</option>
+<option>AC</option>
+<option>ASC</option>
+<option>BA WC</option>
+<option>BA WC 2nd</option>
+<option>Ba XPS</option>
+<option>DAI</option>
+<option>Dnata CP</option>
+<option>Dnata CX</option>
+<option>Dnata U1</option>
+<option>Dnata U2</option>
+<option>Dnata U3</option>
+<option>Dnata VS/Delta</option>
+<option>HCH</option>
+<option>JL</option>
+<option>LG</option>
+<option>LANDMARK GLOBAL</option>
+<option>MW</option>
+<option>Scylla Rd</option>
+<option>Scylla U1</option>
+<option>WFS 549</option>
+<option>WFS 550</option>
+<option>ECMS</option>
+<option>Swissport</option>
+<option>BREAK</option>
+</select>
+
+<label>Arrival</label>
+<input type="time" id="arrival">
+
+<label>Booking</label>
+<input type="time" id="booking">
+
+<label>Loading</label>
+<input type="time" id="loading">
+
+<label>Departure</label>
+<input type="time" id="departure">
+
+<label>Comment</label>
+<textarea id="comment"></textarea>
+
+<button id="addEntryBtn">Add Location</button>
+
+<hr>
+
+<label>Date</label>
+<input type="date" id="filterDate">
+
+<button id="sendExcelBtn">Send to Google Sheet</button>
+
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Vehicle</th>
+<th>Run</th>
+<th>Location</th>
+<th>Arrival</th>
+<th>Booking</th>
+<th>Loading</th>
+<th>Departure</th>
+<th>Specification</th>
+<th>Comment</th>
+</tr>
+</thead>
+
+<tbody id="reportTable"></tbody>
+</table>
+
+<script>
+
 const GOOGLE_SCRIPT_URL =
 "https://script.google.com/macros/s/AKfycbylgggp-wjd_uMWz5997_7JAEHCUt-0pZoEZLTk_nM/exec";
 
-sendExcelBtn.addEventListener("click", async ()=>{
+let entries=[];
 
-  const dateVal = filterDate.value;
+/* Add Entry */
 
-  if(!dailyData[dateVal]){
-    alert("No data");
-    return;
-  }
+addEntryBtn.onclick=function(){
 
-  let rows = [];
+let vehicle=vehicleInput.value;
+let run=runInput.value;
+let specification=specificationInput.value;
+let location=locationInput.value;
 
-  Object.keys(dailyData[dateVal]).forEach(runNum=>{
-    dailyData[dateVal][runNum].forEach(entry=>{
-      rows.push(entry);
-    });
-  });
+if(!vehicle||!run||!specification||!location){
+alert("Complete required fields");
+return;
+}
 
-  try{
+let entry={
+date:filterDate.value||new Date().toISOString().split('T')[0],
+vehicle,
+run,
+location,
+arrival:arrival.value,
+booking:booking.value,
+loading:loading.value,
+departure:departure.value,
+specification,
+comment:comment.value
+};
 
-    await fetch(GOOGLE_SCRIPT_URL,{
-      method:"POST",
-      mode:"no-cors",
-      headers:{
-        "Content-Type":"application/json"
-      },
-      body: JSON.stringify({
-        entries: rows
-      })
-    });
+entries.push(entry);
+renderTable();
 
-    alert("✅ Sent to Google Sheet");
+};
 
-  }catch(err){
-    alert("Send failed");
-  }
+/* Render Table */
+
+function renderTable(){
+
+let tbody=document.getElementById("reportTable");
+tbody.innerHTML="";
+
+entries.forEach((e,i)=>{
+
+let row=tbody.insertRow();
+
+row.insertCell().textContent=e.date;
+row.insertCell().textContent=e.vehicle;
+row.insertCell().textContent=e.run;
+row.insertCell().textContent=e.location;
+row.insertCell().textContent=e.arrival;
+row.insertCell().textContent=e.booking;
+row.insertCell().textContent=e.loading;
+row.insertCell().textContent=e.departure;
+row.insertCell().textContent=e.specification;
+row.insertCell().textContent=e.comment;
 
 });
+
+}
+
+/* Send to Google Sheet */
+
+sendExcelBtn.onclick=async function(){
+
+if(entries.length===0){
+alert("No data");
+return;
+}
+
+try{
+
+await fetch(GOOGLE_SCRIPT_URL,{
+method:"POST",
+mode:"no-cors",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({entries})
+});
+
+alert("✅ Sent to Google Sheet");
+
+}catch(err){
+alert("Send failed");
+}
+
+};
+
+</script>
+
+</body>
+</html>
