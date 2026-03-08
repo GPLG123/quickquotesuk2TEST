@@ -4,64 +4,59 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Driver Daily Report ATR</title>
+<title>ATR Driver Report</title>
+
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
 <style>
-body { font-family: Arial, sans-serif; margin: 20px; }
-label { font-weight: bold; margin-top: 10px; display: block; }
 
-input[type="text"],
-input[type="time"],
-input[type="date"],
-select,
-textarea {
-margin-top:4px;
-margin-bottom:10px;
+body{
+font-family:Arial;
+margin:20px;
+}
+
+label{
+font-weight:bold;
+display:block;
+margin-top:10px;
+}
+
+input,select,textarea{
 padding:6px;
 width:220px;
+margin-bottom:8px;
 box-sizing:border-box;
 }
 
-textarea {
+textarea{
 width:100%;
-height:40px;
-resize:vertical;
+height:50px;
 }
 
-button {
-padding:8px 15px;
+button{
+padding:8px 14px;
 margin-top:10px;
 cursor:pointer;
 }
 
-table {
+table{
 width:100%;
-border-collapse: collapse;
+border-collapse:collapse;
 margin-top:20px;
 font-size:14px;
 }
 
-th, td {
+th,td{
 border:1px solid #888;
-padding:6px 8px;
+padding:6px;
 text-align:center;
 }
 
-th { background-color:#eee; }
-
-.short { width:120px; }
-
-#alertExcel {
-margin-top:15px;
-background-color:#f8d7da;
-border:1px solid #f5c6cb;
-color:#721c24;
-padding:10px;
-font-weight:bold;
+th{
+background:#eee;
 }
-</style>
 
-<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</style>
 
 </head>
 
@@ -69,82 +64,63 @@ font-weight:bold;
 
 <h2>Driver Daily Report ATR</h2>
 
-<label>Vehicle:</label>
-<input type="text" id="vehicle" class="short">
+<label>Vehicle</label>
+<input id="vehicle">
 
-<label>Run:</label>
-<input type="text" id="run" class="short">
+<label>Run</label>
+<input id="run">
 
-<hr>
-
-<label>Collection and Delivery Specification:</label>
+<label>Specification</label>
 <select id="specification">
-<option value="">Select specification</option>
+<option value="">Select</option>
 <option>Collection Only</option>
 <option>Delivery Only</option>
 <option>Collection and Delivery</option>
 </select>
 
-<label>Collection and Delivery Point:</label>
+<label>Location</label>
 <select id="location">
 <option value="">Select</option>
 <option>AC</option>
 <option>ASC</option>
 <option>BA WC</option>
-<option>BA WC 2nd</option>
-<option>Ba XPS</option>
 <option>DAI</option>
-<option>Dnata CP</option>
-<option>Dnata CX</option>
-<option>Dnata U1</option>
-<option>Dnata U2</option>
-<option>Dnata U3</option>
-<option>Dnata VS/Delta</option>
-<option>HCH</option>
-<option>HCH Horton</option>
-<option>JL</option>
-<option>LG</option>
 <option>LANDMARK GLOBAL</option>
-<option>MW</option>
-<option>Scylla Rd</option>
-<option>Scylla U1</option>
-<option>WFS 549</option>
-<option>WFS 550</option>
-<option>ECMS</option>
 <option>Swissport</option>
 <option>BREAK</option>
 <option value="manual">Other (Manual)</option>
 </select>
 
-<input type="text" id="manualLocation" placeholder="Enter manual location"
-style="display:none; width:220px;">
+<input id="manualLocation" placeholder="Manual location"
+style="display:none;width:220px">
 
-<label>Arrival Time:</label>
+<label>Arrival</label>
 <input type="time" id="arrival">
 
-<label>Booking Time:</label>
+<label>Booking</label>
 <input type="time" id="booking">
 
-<label>Loading:</label>
+<label>Loading</label>
 <input type="time" id="loading">
 
-<label>Departure:</label>
+<label>Departure</label>
 <input type="time" id="departure">
 
-<label>Comment:</label>
+<label>Comment</label>
 <textarea id="comment"></textarea>
 
 <button id="addEntryBtn">Add Location</button>
-<button id="sendExcelBtn">Send to Google Sheets</button>
 
 <hr>
 
-<label>Select Date:</label>
-<input type="date" id="filterDate" class="short">
+<input type="date" id="filterDate">
 
-<div id="alertExcel">
-⚠️ After adding locations press <strong>Send to Google Sheets</strong>
-</div>
+<button id="sendExcelBtn">Export Local Excel</button>
+
+<button id="sendGSheetBtn"
+style="background:#2196F3;color:white">
+Send to Google Sheet
+</button>
 
 <table id="reportTable">
 <thead>
@@ -161,6 +137,7 @@ style="display:none; width:220px;">
 <th>Comment</th>
 </tr>
 </thead>
+
 <tbody></tbody>
 </table>
 
@@ -168,18 +145,18 @@ style="display:none; width:220px;">
 
 const STORAGE_KEY="ATR_dailyData";
 
-const API_URL="https://script.google.com/macros/s/AKfycbxiGHuCJkebcECIncBS2fPIhgNzLC6bDMh9fOttv03H0DSy8-qw-z89XncZdPZbdZChFQ/exec";
+const API_URL="https://script.google.com/macros/s/AKfycbzOhcSfDCofJmfcnZZNi05_48Bh5SW7OBNocrYn4fGjz_5jGMIKQe0cvBuYkJa-kiKK/exec";
 
 let dailyData=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");
 
-/* ===== Manual Location ===== */
+/* Manual location */
 
 document.getElementById("location").addEventListener("change",function(){
-document.getElementById("manualLocation").style.display =
-this.value==="manual" ? "block" : "none";
+document.getElementById("manualLocation").style.display=
+this.value==="manual" ? "block":"none";
 });
 
-/* ===== Load Table ===== */
+/* Load table */
 
 function loadTable(date){
 
@@ -202,25 +179,27 @@ row.insertCell().textContent=entry.departure;
 row.insertCell().textContent=entry.specification;
 row.insertCell().textContent=entry.comment;
 });
+
 }
 
-/* ===== Add Entry ===== */
+/* Add Entry */
 
 addEntryBtn.onclick=function(){
 
-let vehicle=vehicle.value.trim();
-let run=run.value.trim();
+let vehicle=document.getElementById("vehicle").value.trim();
+let run=document.getElementById("run").value.trim();
 
 let specification=document.getElementById("specification").value;
 
 let locationSelect=document.getElementById("location");
+
 let locationValue =
 locationSelect.value==="manual"
 ? document.getElementById("manualLocation").value.trim()
 : locationSelect.value;
 
-if(!vehicle || !run || !locationValue || !specification){
-alert("Please fill required fields");
+if(!vehicle||!run||!locationValue||!specification){
+alert("Fill required fields");
 return;
 }
 
@@ -245,18 +224,58 @@ comment:comment.value
 localStorage.setItem(STORAGE_KEY,JSON.stringify(dailyData));
 
 loadTable(date);
+
 };
 
-/* ===== Send to Google Sheets ===== */
+/* Export Excel Local */
 
 sendExcelBtn.onclick=function(){
 
-let date=document.getElementById("filterDate").value;
+let date=filterDate.value;
 
-if(!dailyData[date]){
-alert("No data for selected date");
-return;
-}
+if(!dailyData[date]) return alert("No data");
+
+let rows=[];
+
+Object.values(dailyData[date]).forEach(runArr=>{
+runArr.forEach(entry=>{
+rows.push([
+entry.date,
+entry.vehicle,
+entry.run,
+entry.location,
+entry.arrival,
+entry.booking,
+entry.loading,
+entry.departure,
+entry.specification,
+entry.comment
+]);
+});
+});
+
+if(rows.length===0) return alert("No rows");
+
+const sheetData=[
+["Date","Vehicle","Run","Location","Arrival","Booking","Loading","Departure","Specification","Comment"],
+...rows
+];
+
+const ws=XLSX.utils.aoa_to_sheet(sheetData);
+const wb=XLSX.utils.book_new();
+
+XLSX.utils.book_append_sheet(wb,ws,"Report");
+
+XLSX.writeFile(wb,"ATR_Report_"+filterDate.value+".xlsx");
+};
+
+/* Send Google Sheet */
+
+sendGSheetBtn.onclick=function(){
+
+let date=filterDate.value;
+
+if(!dailyData[date]) return alert("No data");
 
 let entries=[];
 Object.values(dailyData[date]).forEach(runArr=>{
@@ -269,19 +288,18 @@ headers:{"Content-Type":"application/json"},
 body:JSON.stringify({entries})
 })
 .then(r=>r.text())
-.then(()=>alert("Data sent to Google Sheets"))
-.catch(()=>alert("Send failed"));
+.then(()=>alert("Sent to Google Sheet ✅"))
+.catch(()=>alert("Send failed ❌"));
+
 };
 
-/* ===== Init ===== */
+/* Init */
 
 window.onload=function(){
+if(!filterDate.value)
+filterDate.value=new Date().toISOString().split("T")[0];
 
-let today=new Date().toISOString().split("T")[0];
-
-document.getElementById("filterDate").value=today;
-
-loadTable(today);
+loadTable(filterDate.value);
 };
 
 </script>
